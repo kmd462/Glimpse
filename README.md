@@ -18,27 +18,27 @@ Users can create albums and effortlessly post pictures that others can view thro
 ### Login Screen
 *Login interface with email/password authentication and link to registration*
 
-![App Screenshot](screenshots/Final/Glimpse_Login.png)
+<img src="screenshots/Final/Glimpse_Login.png" width="50%" alt="Login Screenshot">
 
 ### Main Feed
 *Grid layout showing photos from all users with username and album information*
 
-![App Screenshot](screenshots/Final/Glimpse_Feed.png)
+<img src="screenshots/Final/Glimpse_Feed.png" width="50%" alt="Feed Screenshot">
 
 ### Album Creation
 *Interface for creating new albums with title, description, and batch photo upload*
 
-![App Screenshot](screenshots/Final/Glimpse_CreateAlbum.png)
+<img src="screenshots/Final/Glimpse_CreateAlbum.png" width="50%" alt="Create Screenshot">
 
 ### Photo Viewer
 *Swipe-through photo viewer with like/comment functionality*
 
-![App Screenshot](screenshots/Final/Glimpse_ViewPhoto.png)
+<img src="screenshots/Final/Glimpse_ViewPhoto.png" width="50%" alt="Photo Screenshot">
 
 ### User Profile
 *Profile screen showing user statistics, albums, and photos with tab navigation*
 
-![App Screenshot](screenshots/Final/Glimpse_Profile.png)
+<img src="screenshots/Final/Glimpse_Profile.png" width="50%" alt="Profile Screenshot">
 
 *Note: Screenshots demonstrate the app's interface including navigation between screens, photo grid layouts, swipe gestures, social interaction features, and responsive design across different screen sizes.*
 
