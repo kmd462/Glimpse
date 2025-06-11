@@ -1,97 +1,266 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Glimpse - Photo Sharing Mobile App
 
-# Getting Started
+## Design and Purpose
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+**Glimpse** is a React Native photo-sharing mobile application designed to function as a streamlined photo dump platform. The app targets casual photographers, social media users, and friend groups who want a simple way to share collections of photos without the complexity of traditional photo management apps.
 
-## Step 1: Start Metro
+### Intended Use
+Users can create albums and effortlessly post pictures that others can view through an intuitive swipe-based interface, similar to stories on popular social platforms. The key differentiator is that whenever a user posts a photo in their album, it appears on others' feeds individually, and viewers can click to access the complete album.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### Target Audience
+- Casual photographers looking for easy photo sharing
+- Social media users wanting a focused photo experience
+- Friend groups and families sharing memories
+- Anyone seeking a clean, gesture-based photo viewing experience
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+## Screenshots
 
-```sh
-# Using npm
-npm start
+### Login Screen
+*Login interface with email/password authentication and link to registration*
 
-# OR using Yarn
-yarn start
+![Login Screen Placeholder](screenshots/login-screen.png)
+
+### Main Feed
+*Grid layout showing photos from all users with username and album information*
+
+![Feed Screen Placeholder](screenshots/feed-screen.png)
+
+### Album Creation
+*Interface for creating new albums with title, description, and batch photo upload*
+
+![Create Album Placeholder](screenshots/create-album-screen.png)
+
+### Photo Viewer
+*Swipe-through photo viewer with like/comment functionality*
+
+![Photo Viewer Placeholder](screenshots/photo-viewer-screen.png)
+
+### User Profile
+*Profile screen showing user statistics, albums, and photos with tab navigation*
+
+![Profile Screen Placeholder](screenshots/profile-screen.png)
+
+*Note: Screenshots demonstrate the app's interface including navigation between screens, photo grid layouts, swipe gestures, social interaction features, and responsive design across different screen sizes.*
+
+## Server API Design and Specification
+
+The application utilizes Firebase as the backend service, providing authentication, database, and storage capabilities. All API communications are fully integrated into the app through Firebase SDK.
+
+### Firebase Services Integration
+
+#### Authentication API
+**Endpoint**: Firebase Authentication Service  
+**Methods**: 
+- **POST** - User Registration
+  - **Parameters**: `email` (string), `password` (string), `username` (string)
+  - **Example**: 
+  ```javascript
+  await auth().createUserWithEmailAndPassword(email, password);
+  await firestore().collection('users').doc(user.uid).set({
+    username,
+    email,
+    createdAt: firestore.FieldValue.serverTimestamp()
+  });
+  ```
+
+- **POST** - User Login
+  - **Parameters**: `email` (string), `password` (string)
+  - **Example**:
+  ```javascript
+  await auth().signInWithEmailAndPassword(email, password);
+  ```
+
+#### Firestore Database API
+**Endpoint**: Cloud Firestore Database  
+**Collections**: `users`, `albums`, `photos`, `comments`
+
+- **GET/POST** - Albums Management
+  - **Method**: Real-time listeners and CRUD operations
+  - **Parameters**: `userId`, `title`, `description`, `photoCount`
+  - **Example**:
+  ```javascript
+  // Create Album
+  const albumRef = await firestore().collection('albums').add({
+    title: "My Album",
+    userId: user.uid,
+    createdAt: firestore.FieldValue.serverTimestamp()
+  });
+  
+  // Get User Albums
+  const albums = await firestore()
+    .collection('albums')
+    .where('userId', '==', userId)
+    .orderBy('createdAt', 'desc')
+    .get();
+  ```
+
+- **GET/POST** - Photos Management
+  - **Method**: CRUD operations with metadata
+  - **Parameters**: `albumId`, `imageUrl`, `thumbnailUrl`, `metadata`
+  - **Example**:
+  ```javascript
+  // Add Photo
+  await firestore().collection('photos').add({
+    albumId,
+    userId,
+    imageUrl,
+    metadata: { originalName, size },
+    likes: [],
+    likeCount: 0,
+    createdAt: firestore.FieldValue.serverTimestamp()
+  });
+  ```
+
+- **GET/POST** - Social Features
+  - **Method**: Real-time updates for likes and comments
+  - **Parameters**: `photoId`, `userId`, `text`
+  - **Example**:
+  ```javascript
+  // Toggle Like
+  const photoRef = firestore().collection('photos').doc(photoId);
+  await firestore().runTransaction(async (transaction) => {
+    const photoDoc = await transaction.get(photoRef);
+    const likes = photoDoc.data().likes || [];
+    const newLikes = likes.includes(userId) 
+      ? likes.filter(id => id !== userId)
+      : [...likes, userId];
+    transaction.update(photoRef, { 
+      likes: newLikes, 
+      likeCount: newLikes.length 
+    });
+  });
+  ```
+
+#### Firebase Storage API
+**Endpoint**: Firebase Cloud Storage  
+**Method**: File upload and retrieval
+
+- **POST** - Photo Upload
+  - **Parameters**: `imageUri`, `photoId`
+  - **File Constraints**: Max 10MB, image formats only
+  - **Example**:
+  ```javascript
+  const reference = storage().ref(`photos/${photoId}`);
+  await reference.putFile(imageUri);
+  const downloadURL = await reference.getDownloadURL();
+  ```
+
+### API Integration Architecture
+All Firebase services are accessed through a centralized `FirebaseService` class that provides:
+- Error handling and data validation
+- Consistent response formatting
+- Real-time data synchronization
+- Offline capability support
+- Transaction management for data consistency
+
+The app uses Firebase SDK's real-time listeners to provide instant updates across all connected clients, ensuring users see new photos, likes, and comments immediately.
+
+## Experiences
+
+### Design and Development Process
+
+#### Technology Choices
+I chose React Native with Firebase for this project to leverage:
+- **Cross-platform development** - Single codebase for iOS and Android
+- **Real-time capabilities** - Firebase's live data synchronization
+- **Rapid prototyping** - Firebase's backend-as-a-service approach
+- **Modern UI patterns** - React Navigation and gesture-based interactions
+
+#### Major Challenges and Solutions
+
+**Challenge 1: Navigation Architecture**
+- **Issue**: Implementing complex nested navigation with tab navigation, stack navigation, and modal presentations
+- **Solution**: Used React Navigation 6 with proper screen hierarchy and parameter passing between screens
+- **Implementation**: Created separate stack navigators for authentication and main app flows
+
+**Challenge 2: Firebase Integration**
+- **Issue**: Setting up Firebase services with proper security rules and real-time data synchronization
+- **Solution**: Implemented Firebase emulators for development and comprehensive security rules for production
+- **Code Pattern**: 
+```javascript
+// Centralized Firebase service layer
+export class FirebaseService {
+  static async createAlbum(albumData) {
+    try {
+      const albumRef = await firestore().collection('albums').add({
+        ...albumData,
+        createdAt: firestore.FieldValue.serverTimestamp()
+      });
+      return albumRef.id;
+    } catch (error) {
+      throw new Error(`Failed to create album: ${error.message}`);
+    }
+  }
+}
 ```
 
-## Step 2: Build and run your app
+**Challenge 3: Image Handling and Performance**
+- **Issue**: Managing large image uploads and ensuring smooth scrolling in photo grids
+- **Solution**: Implemented image compression, thumbnail generation, and lazy loading with React Native Fast Image
+- **Optimization**: Used FlatList with optimized rendering for large photo collections
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+**Challenge 4: Real-time Social Features**
+- **Issue**: Implementing likes and comments with immediate UI updates
+- **Solution**: Used Firestore transactions for data consistency and real-time listeners for UI updates
+- **Pattern**: Optimistic UI updates with rollback on failure
 
-### Android
+#### Modules and Techniques Adopted
 
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+**State Management**: Context API with useReducer for global authentication state
+```javascript
+const AuthContext = createContext();
+export const useAuth = () => useContext(AuthContext);
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+**Custom Hooks**: Created reusable hooks for Firestore data fetching
+```javascript
+export const useCollection = (collectionName, queryConstraints) => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  // Real-time listener implementation
+};
 ```
 
-Then, and every time you update your native dependencies, run:
+**Component Architecture**: Modular, reusable components with clear separation of concerns
+- PhotoGrid for consistent photo layouts
+- PhotoInteractions for social features
+- Centralized navigation configuration
 
-```sh
-bundle exec pod install
-```
+#### Coding Best Practices
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+1. **Error Boundaries**: Implemented comprehensive error handling
+2. **Loading States**: Added skeleton screens and activity indicators
+3. **Accessibility**: Proper contrast ratios and semantic markup
+4. **Performance**: Image optimization and lazy loading
+5. **Security**: Firebase security rules and input validation
+6. **Code Organization**: Feature-based folder structure
 
-```sh
-# Using npm
-npm run ios
+#### Development Tools Used
+- **Firebase Emulators**: Local development and testing
+- **React Native Debugger**: Performance monitoring
+- **ESLint/Prettier**: Code quality and formatting
+- **Git**: Version control with feature branches
 
-# OR using Yarn
-yarn ios
-```
+### Future Plans
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+#### Short-term Enhancements
+- **Push Notifications**: Real-time alerts for new likes and comments
+- **Image Filters**: Basic photo editing capabilities
+- **Search Functionality**: Find photos by tags or users
+- **Offline Support**: Enhanced offline photo caching
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+#### Long-term Vision
+- **Social Network Features**: Follow users, private albums
+- **Advanced Analytics**: User engagement metrics
+- **Web Application**: React web version with shared codebase
+- **AI Integration**: Auto-tagging and photo organization
 
-## Step 3: Modify your app
+### Key Learnings
+This project provided hands-on experience with:
+- Modern React Native development patterns
+- Firebase backend integration and real-time databases
+- Mobile UI/UX design principles
+- Cross-platform mobile development challenges
+- Performance optimization for media-heavy applications
 
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+The development process reinforced the importance of planning architecture early, implementing proper error handling, and prioritizing user experience in mobile applications.
